@@ -1,12 +1,12 @@
 import UIKit
 
 
-enum Suit {
+enum Suit: CaseIterable {
     case spades, clubs, hearts, diamonds
 }
 
-enum PlayingCardValue: Int {
-    case one = 1, two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, ace
+enum PlayingCardValue: Int, CaseIterable {
+    case one = 1, two = 2, three = 3, four = 4, five = 5, six = 6, seven = 7, eight = 8, nine = 9, ten = 10, jack = 11, queen = 12, king = 13, ace = 14
 }
 
 struct Card {
@@ -16,26 +16,120 @@ struct Card {
 
 struct Hand {
     let cards: [Card]
-    var handType: [HandType]? // Bonus points for changing from a string to a custom enum of all the winningHands
-    
+    var handType: HandType?
+
     init?(cards: [Card]) {
         guard cards.count == 5 else { return nil }
         self.cards = cards
+        self.handType = determineHandType(cards)
     }
 }
 
-enum HandType {
-    case HighCard
-    case OnePair
-    case TwoPairs
-    case ThreeOfAKind
-    case Straight
-    case Flush
-    case FullHouse
-    case FourOfAKind
-    case StraightFlush
-    case RoyalFlush
+enum HandType: String {
+    case HighCard = "HighCard"
+    case OnePair = "OnePair"
+    case TwoPairs = "TwoPairs"
+    case ThreeOfAKind = "ThreeOfAKind"
+    case Straight = "Straight"
+    case Flush = "Flush"
+    case FullHouse = "FullHouse"
+    case FourOfAKind = "FourOfAKind"
+    case StraightFlush = "StraightFlush"
+    case RoyalFlush = "RoyalFlush"
 }
+
+func determineWinner(_ hands: [Hand]) -> Hand? {
+    // make sure there are more than two players
+    guard hands.count >= 2 else { return nil }
+    var winningHand: Hand?
+    for hand in hands {
+        guard let handType = hand.handType else {
+            continue // skip hands that don't have a valid hand type
+        }
+        if let currentWinningHand = winningHand,
+           currentWinningHand.handType!.rawValue == handType.rawValue {
+            // if both hands have the same type, compare the highest card
+            let currentWinningCard = currentWinningHand.cards.max { $0.value.rawValue < $1.value.rawValue }!
+            let newWinningCard = hand.cards.max { $0.value.rawValue < $1.value.rawValue }!
+            if newWinningCard.value.rawValue > currentWinningCard.value.rawValue {
+                winningHand = hand
+            }
+        } else if winningHand == nil ||
+                  handType.rawValue > winningHand!.handType!.rawValue {
+            // if the new hand has a higher type than the current winning hand
+            // or there is no current winning hand, we update the winning hand
+            winningHand = hand
+        }
+    }
+    return winningHand
+}
+
+func determineHandType(_ cards: [Card]) -> HandType {
+    let values = cards.map { $0.value.rawValue }.sorted()
+    let suits = cards.map { $0.suit }
+    let isFlush = Set(suits).count == 1
+    let isStraight = values.last! - values.first! == 4 && Set(values).count == 5
+    let groupedValues = Dictionary(grouping: values, by: { $0 })
+    let pairs = groupedValues.filter { $0.value.count == 2 }
+    let triples = groupedValues.filter { $0.value.count == 3 }
+    let quads = groupedValues.filter { $0.value.count == 4 }
+    
+    if isFlush && isStraight && values.last == PlayingCardValue.ace.rawValue {
+        return .RoyalFlush
+    }
+    if isFlush && isStraight {
+        return .StraightFlush
+    }
+    if quads.first != nil {
+        return .FourOfAKind
+    }
+    if let triples = triples.first, let pairs = pairs.first {
+        return .FullHouse
+    }
+    if isFlush {
+        return .Flush
+    }
+    if isStraight {
+        return .Straight
+    }
+    if triples.first != nil {
+        return .ThreeOfAKind
+    }
+    if pairs.count == 2 {
+        return .TwoPairs
+    }
+    if pairs.count == 1 {
+        return .OnePair
+    }
+    return .HighCard
+}
+
+
+let hand1 = Hand(cards: [
+    Card(suit: .hearts, value: .ace),
+    Card(suit: .hearts, value: .king),
+    Card(suit: .hearts, value: .queen),
+    Card(suit: .hearts, value: .jack),
+    Card(suit: .hearts, value: .ten)
+])
+let hand2 = Hand(cards: [
+    Card(suit: .spades, value: .two),
+    Card(suit: .spades, value: .four),
+    Card(suit: .spades, value: .six),
+    Card(suit: .spades, value: .eight),
+    Card(suit: .spades, value: .ten)
+])
+let hand3 = Hand(cards: [
+    Card(suit: .spades, value: .three),
+    Card(suit: .spades, value: .three),
+    Card(suit: .spades, value: .three),
+    Card(suit: .spades, value: .four),
+    Card(suit: .spades, value: .four)
+])
+
+let optionalHands: [Hand?] = [hand1, hand2, hand3]
+let hands = optionalHands.compactMap { $0 }
+let winner = determineWinner(hands)
 
 
 /// determineWinner will take in an array of "Poker" hands and determine which hand is better (according to texas holdem rules).
@@ -46,102 +140,3 @@ enum HandType {
 ///
 /// - Returns: Hand - Which is the hand that won. It is expected that the handType property("2 of a kind", "3 of a kind", "4 of a kind", etc) will have a value when returning the winning hand.
 ///
-
-func determineWinner(hands: [Hand]) -> Hand? {
-    // make sure there are more than two players
-    guard hands.count >= 2 else { return nil }
-    var values: [Int] = []
-    for hand in hands {
-        var handValues: [HandType]
-        var handSuits: Suit
-        
-        
-        
-    }
-    
-
-    return nil
-}
-
-
-
-func pokerWinner(hands: [[String]]) -> String {
-    
-    // Define arrays to store the values and suits of each hand
-    let values = hands.map { $0.map { card in
-        let value = String(card.prefix(1))
-        switch value {
-            case "A": return 14
-            case "K": return 13
-            case "Q": return 12
-            case "J": return 11
-            default: return Int(value)!
-        }
-    }}
-    let suits = hands.map { $0.map { String($0.suffix(1)) } }
-    
-    // Check for a tie
-    if values.allSatisfy({ $0 == values[0] }) {
-        return "Tie"
-    }
-    
-    // Define the hand rankings and corresponding messages
-    let handRankings: [(values: Set<Int>, ranking: String)] = [
-        (Set([10, 11, 12, 13, 14]), "straight flush"),
-        (Set(values.flatMap { $0 }.filter { val in values.flatMap { $0 }.filter { $0 == val }.count == 4 }), "four of a kind"),
-        (Set(values.flatMap { $0 }.filter { val in values.flatMap { $0 }.filter { $0 == val }.count == 3 })
-         .intersection(Set(values.flatMap { $0 }.filter { val in values.flatMap { $0 }.filter { $0 == val }.count == 2 })), "full house"),
-    ]
-    
-    // Check for hand rankings
-    for (index, handValues) in values.enumerated() {
-        for (values, ranking) in handRankings {
-            if values.isSubset(of: Set(handValues)) {
-                return "Hand \(index + 1) wins with a \(ranking)"
-            }
-        }
-    }
-    
-    // Return the highest card in the highest ranked hand
-    let highestRankedHandIndex = values.enumerated().max(by: { (a, b) -> Bool in
-        if a.element.max() == b.element.max() {
-            for i in (0...4).reversed() {
-                if a.element[i] != b.element[i] {
-                    return a.element[i] < b.element[i]
-                }
-            }
-            return false
-        } else {
-            return a.element.max()! < b.element.max()!
-        }
-    })!.offset
-    return "Hand \(highestRankedHandIndex + 1) wins with a high card"
-}
-
-let hands = [
-    ["2H", "3D", "5S", "9C", "KD"],
-    ["2C", "3H", "4S", "8C", "AH"],
-    ["2S", "3C", "4H", "5D", "6D"],
-    ["2H", "2D", "4C", "4D", "4S"]
-]
-
-let hands1 = [
-    ["2H", "2D", "5S", "5C", "5D"],
-    ["2C", "4H", "4S", "8C", "AH"],
-    ["2S", "3C", "4H", "5D", "8D"],
-    ["2H", "3D", "4C", "5D", "6S"]
-]
-
-let hands2 = [
-    ["10D", "11D", "12D", "13D", "14D"],
-    ["2C", "4H", "4S", "8C", "AH"],
-    ["2S", "3C", "4H", "5D", "6D"],
-    ["10H", "11H", "12H", "13H", "14H"]
-]
-
-let winner1 = pokerWinner(hands: hands)
-print(winner1)
-let winner2 = pokerWinner(hands: hands1)
-print(winner2)
-let winner3 = pokerWinner(hands: hands2)
-print(winner3)
